@@ -1,0 +1,25 @@
+include:
+    - path:
+          #   - .docker/docker-compose-rustfs.yml
+          - .docker/docker-compose-dragonfly.yml
+          - .docker/docker-compose-postgres.yml
+      project_directory: .
+
+services:
+    app:
+        extends:
+            file: .docker/docker-compose-base.yml
+            service: app
+        restart: always
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: development
+        volumes:
+            - ./:/usr/src/app
+            - ./src/assets/temp:/usr/src/app/src/assets/temp
+            - /usr/src/app/node_modules
+
+networks:
+    dokploy-network:
+        external: true

@@ -1,0 +1,19 @@
+include:
+    - path:
+          - .docker/docker-compose-postgres.yml
+      project_directory: .
+
+services:
+    app:
+        extends:
+            file: .docker/docker-compose-base.yml
+            service: app
+        restart: always
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: production
+
+networks:
+    dokploy-network:
+        external: true
