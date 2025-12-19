@@ -5,12 +5,12 @@
  * @returns Un objeto con la firma y el timestamp
  */
 export async function generateSignature(method: string, path: string) {
-    const timestamp = Date.now();
-    const dataToSign = `${timestamp}:${method}:${path}`;
-    return {
-        signature: (await generateHMAC(dataToSign, "SECRET_KEY")).toString(),
-        timestamp: timestamp.toString(),
-    };
+	const timestamp = Date.now();
+	const dataToSign = `${timestamp}:${method}:${path}`;
+	return {
+		signature: (await generateHMAC(dataToSign, "SECRET_KEY")).toString(),
+		timestamp: timestamp.toString(),
+	};
 }
 
 /**
@@ -20,20 +20,20 @@ export async function generateSignature(method: string, path: string) {
  * @returns Un objeto con la firma y el timestamp
  */
 async function generateHMAC(message: string, secretKey: string) {
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(secretKey);
-    const messageData = encoder.encode(message);
-    const key = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"]
-    );
-    const signature = await crypto.subtle.sign("HMAC", key, messageData);
-    const hex = Array.from(new Uint8Array(signature))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+	const encoder = new TextEncoder();
+	const keyData = encoder.encode(secretKey);
+	const messageData = encoder.encode(message);
+	const key = await crypto.subtle.importKey(
+		"raw",
+		keyData,
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	const signature = await crypto.subtle.sign("HMAC", key, messageData);
+	const hex = Array.from(new Uint8Array(signature))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
 
-    return hex;
+	return hex;
 }

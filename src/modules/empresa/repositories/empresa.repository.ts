@@ -6,17 +6,17 @@ import type { EmpresaUpdateDto } from "../dtos/empresa-update.dto";
 
 @Injectable()
 export class EmpresaRepository {
-    constructor(
-        @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>
-    ) {}
+	constructor(
+		@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+	) {}
 
-    async update(id: number, userId: number, data: EmpresaUpdateDto) {
-        return this.db
-            .update(schema.empresa)
-            .set({
-                ...data,
-                user_id: userId,
-            })
-            .where(eq(schema.empresa.id, id));
-    }
+	async update(id: number, userId: number, data: EmpresaUpdateDto) {
+		return this.db
+			.update(schema.empresa)
+			.set({
+				...data,
+				user_id: userId,
+			})
+			.where(eq(schema.empresa.id, id));
+	}
 }

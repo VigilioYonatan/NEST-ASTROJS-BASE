@@ -14,17 +14,17 @@ export * from "./libs";
 export * from "./types";
 
 const FilterSystem = Object.assign(FilterProvider, {
-    search: Search,
-    view: ViewToggle,
-    filters: AdvancedButton,
-    filters_custom: {
-        select: FilterSelect,
-        multiselect: FilterMultiselect,
-        range: FilterRange,
-        date_preset: FilterDatePreset,
-        date: FilterDate,
-        search: FilterSearch,
-    },
+	search: Search,
+	view: ViewToggle,
+	filters: AdvancedButton,
+	filters_custom: {
+		select: FilterSelect,
+		multiselect: FilterMultiselect,
+		range: FilterRange,
+		date_preset: FilterDatePreset,
+		date: FilterDate,
+		search: FilterSearch,
+	},
 });
 
 export default FilterSystem;

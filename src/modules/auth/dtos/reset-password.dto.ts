@@ -3,11 +3,11 @@ import { userSchema } from "@modules/user/schemas/user.schema";
 import { createZodDto } from "nestjs-zod";
 
 export const resetPasswordSchema = z
-    .object({
-        token: z.string(),
-    })
-    .extend({
-        password: userSchema.shape.password.unwrap(),
-    });
+	.object({
+		token: z.string(),
+	})
+	.extend({
+		password: userSchema.shape.password.unwrap(),
+	});
 
 export class ResetPasswordDto extends createZodDto(resetPasswordSchema) {}

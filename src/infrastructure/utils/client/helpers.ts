@@ -5,75 +5,73 @@ import type { Path, UseFormReturn } from "react-hook-form";
 
 //copy image and paste
 export async function onPageImage<T extends object>(
-    form: UseFormReturn<T>,
-    key: keyof T
+	form: UseFormReturn<T>,
+	key: keyof T,
 ) {
-    const text = await navigator.clipboard.readText();
-    if (!text.startsWith("http")) {
-        sweetAlert({
-            icon: "info",
-            title: "Buscar y copiar <i class='far fa-copy'></i> imagen en  <i class='fas fa-cogs'></i>",
-        });
-        return;
-    }
-    try {
-        const response = await fetch(`/proxy-image?url=${text}`);
-        const blob = await response.blob(); // Convertir a blob
-        const file = new File([blob], text, { type: "image/webp" });
-        form.setValue(
-            key as unknown as Path<T>,
-            // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-            [...(form.watch(key as unknown as Path<T>) ?? []), file] as any
-        );
-    } catch (error) {
-        alert("Error imagen");
-    }
+	const text = await navigator.clipboard.readText();
+	if (!text.startsWith("http")) {
+		sweetAlert({
+			icon: "info",
+			title:
+				"Buscar y copiar <i class='far fa-copy'></i> imagen en  <i class='fas fa-cogs'></i>",
+		});
+		return;
+	}
+	try {
+		const response = await fetch(`/proxy-image?url=${text}`);
+		const blob = await response.blob(); // Convertir a blob
+		const file = new File([blob], text, { type: "image/webp" });
+		form.setValue(
+			key as unknown as Path<T>,
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+			[...(form.watch(key as unknown as Path<T>) ?? []), file] as any,
+		);
+	} catch (error) {
+		alert("Error imagen");
+	}
 }
 
 export function formatSoles(total: number) {
-    return `S/ ${total}`;
+	return `S/ ${total}`;
 }
 
 // remove query in web url
 export function removeValueQuery(key: "open") {
-    const url = new URL(window.location.href);
-    url.searchParams.delete(key);
-    window.history.replaceState({}, document.title, url.toString());
+	const url = new URL(window.location.href);
+	url.searchParams.delete(key);
+	window.history.replaceState({}, document.title, url.toString());
 }
 
 // remove query in web url
 export function setValueQuery(key: string, value: string) {
-    const url = new URL(window.location.href);
-    url.searchParams.set(key, value);
-    window.history.replaceState({}, document.title, url);
+	const url = new URL(window.location.href);
+	url.searchParams.set(key, value);
+	window.history.replaceState({}, document.title, url);
 }
 // remove query in web url
 export function getQuery(key: string) {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    return urlParams.get(key);
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString);
+	return urlParams.get(key);
 }
 
 // media query download
 export function downloadPDF() {
-    return useMediaQuery("(max-width: 600px)");
+	return useMediaQuery("(max-width: 600px)");
 }
 
 // ejemplo: yon****@gmail.com
 export function ocultarEmail(email: string) {
-    if (!email.includes("@")) {
-        return email;
-    }
-    const [nombre, dominio] = email.split("@");
-    const caracteresVisibles = 2;
-    const parteOculta = "*".repeat(
-        Math.max(0, nombre.length - caracteresVisibles)
-    );
+	if (!email.includes("@")) {
+		return email;
+	}
+	const [nombre, dominio] = email.split("@");
+	const caracteresVisibles = 2;
+	const parteOculta = "*".repeat(
+		Math.max(0, nombre.length - caracteresVisibles),
+	);
 
-    return `${nombre.substring(
-        0,
-        caracteresVisibles
-    )}${parteOculta}@${dominio}`;
+	return `${nombre.substring(0, caracteresVisibles)}${parteOculta}@${dominio}`;
 }
 
 /****  METHOD to get files to edit  - TYPE="image/webp"*****/
@@ -136,148 +134,148 @@ export function ocultarEmail(email: string) {
 
 /****  METHOD to consume api files  *****/
 export interface ResultApiImages {
-    success: boolean;
-    files: FilesSchema[];
+	success: boolean;
+	files: FilesSchema[];
 }
 export interface ResultApiImagesError<T extends object> {
-    success: false;
-    message: string;
-    body: keyof T;
+	success: false;
+	message: string;
+	body: keyof T;
 }
 export async function uploadApi(
-    url: string,
-    body: { file: File[] | null; name?: string }
+	url: string,
+	body: { file: File[] | null; name?: string },
 ) {
-    const formData = new FormData();
+	const formData = new FormData();
 
-    if (body.name) {
-        formData.append("name", body.name);
-    }
-    if (body.file) {
-        for (const file of body.file) {
-            formData.append("file", file);
-        }
-    }
-    const responseImage = await fetch(url, {
-        method: "POST",
-        body: formData,
-    });
-    const resultImage: ResultApiImages = await responseImage.json();
-    if (!resultImage.success) throw resultImage;
-    return resultImage;
+	if (body.name) {
+		formData.append("name", body.name);
+	}
+	if (body.file) {
+		for (const file of body.file) {
+			formData.append("file", file);
+		}
+	}
+	const responseImage = await fetch(url, {
+		method: "POST",
+		body: formData,
+	});
+	const resultImage: ResultApiImages = await responseImage.json();
+	if (!resultImage.success) throw resultImage;
+	return resultImage;
 }
 
 export function normalizarText(texto: string) {
-    return texto
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
+	return texto
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase();
 }
 export function formatTelephoneNumber(telephone: string) {
-    return telephone.replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3");
+	return telephone.replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3");
 }
 
 export function normalizeString(str: string) {
-    return str
-        .normalize("NFD") // Descompone los caracteres acentuados en su forma base + acento
-        .replace(/[\u0300-\u036f]/g, "") // Elimina los diacríticos (tildes)
-        .toLowerCase()
-        .trim();
+	return str
+		.normalize("NFD") // Descompone los caracteres acentuados en su forma base + acento
+		.replace(/[\u0300-\u036f]/g, "") // Elimina los diacríticos (tildes)
+		.toLowerCase()
+		.trim();
 }
 
 export function handlerError<T extends object>(
-    form: UseFormReturn<T>,
-    error: { success: boolean; body: keyof T; message: string },
-    message: string
+	form: UseFormReturn<T>,
+	error: { success: boolean; body: keyof T; message: string },
+	message: string,
 ) {
-    if (error?.body) {
-        form.setError(error.body as unknown as Path<T>, {
-            message: error.message,
-        });
-        form.resetField(error.body as unknown as Path<T>, {
-            keepError: true,
-        });
+	if (error?.body) {
+		form.setError(error.body as unknown as Path<T>, {
+			message: error.message,
+		});
+		form.resetField(error.body as unknown as Path<T>, {
+			keepError: true,
+		});
 
-        return;
-    }
-    sweetModal({
-        icon: "danger",
-        title: message,
-        text: `${error.message}`,
-    });
+		return;
+	}
+	sweetModal({
+		icon: "danger",
+		title: message,
+		text: `${error.message}`,
+	});
 }
 
 export const sizeIcon: Record<
-    "small" | "medium" | "large" | "xlarge" | "xxlarge" | "xxxlarge",
-    {
-        width: number;
-        height: number;
-        minWidth: number;
-        maxWidth: number;
-        minHeight: number;
-        maxHeight: number;
-    }
+	"small" | "medium" | "large" | "xlarge" | "xxlarge" | "xxxlarge",
+	{
+		width: number;
+		height: number;
+		minWidth: number;
+		maxWidth: number;
+		minHeight: number;
+		maxHeight: number;
+	}
 > = {
-    small: {
-        width: 16,
-        height: 16,
-        minWidth: 16,
-        maxWidth: 16,
-        minHeight: 16,
-        maxHeight: 16,
-    },
-    medium: {
-        width: 20,
-        height: 20,
-        minWidth: 20,
-        maxWidth: 20,
-        minHeight: 20,
-        maxHeight: 20,
-    },
-    large: {
-        width: 24,
-        height: 24,
-        minWidth: 24,
-        maxWidth: 24,
-        minHeight: 24,
-        maxHeight: 24,
-    },
-    xlarge: {
-        width: 32,
-        height: 32,
-        minWidth: 32,
-        maxWidth: 32,
-        minHeight: 32,
-        maxHeight: 32,
-    },
-    xxlarge: {
-        width: 40,
-        height: 40,
-        minWidth: 40,
-        maxWidth: 40,
-        minHeight: 40,
-        maxHeight: 40,
-    },
-    xxxlarge: {
-        width: 48,
-        height: 48,
-        minWidth: 48,
-        maxWidth: 48,
-        minHeight: 48,
-        maxHeight: 48,
-    },
+	small: {
+		width: 16,
+		height: 16,
+		minWidth: 16,
+		maxWidth: 16,
+		minHeight: 16,
+		maxHeight: 16,
+	},
+	medium: {
+		width: 20,
+		height: 20,
+		minWidth: 20,
+		maxWidth: 20,
+		minHeight: 20,
+		maxHeight: 20,
+	},
+	large: {
+		width: 24,
+		height: 24,
+		minWidth: 24,
+		maxWidth: 24,
+		minHeight: 24,
+		maxHeight: 24,
+	},
+	xlarge: {
+		width: 32,
+		height: 32,
+		minWidth: 32,
+		maxWidth: 32,
+		minHeight: 32,
+		maxHeight: 32,
+	},
+	xxlarge: {
+		width: 40,
+		height: 40,
+		minWidth: 40,
+		maxWidth: 40,
+		minHeight: 40,
+		maxHeight: 40,
+	},
+	xxxlarge: {
+		width: 48,
+		height: 48,
+		minWidth: 48,
+		maxWidth: 48,
+		minHeight: 48,
+		maxHeight: 48,
+	},
 };
 export interface FilterResult<T extends object> {
-    search?: {
-        value: string | null;
-        debounce: string | null;
-    };
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    filters: Partial<Record<keyof T, any>>;
-    typeView?: "table" | "list";
+	search?: {
+		value: string | null;
+		debounce: string | null;
+	};
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	filters: Partial<Record<keyof T, any>>;
+	typeView?: "table" | "list";
 }
 export const animationFadeInTailwind =
-    "animate-[fadeIn_0.5s_ease-in-out_forwards]";
+	"animate-[fadeIn_0.5s_ease-in-out_forwards]";
 
 // export function typeTextExtensions(extensions: string[]) {
 //     const mimeList = extensions
@@ -297,5 +295,5 @@ export const animationFadeInTailwind =
 // }
 
 export function cn(...classes: (string | undefined | null | boolean)[]) {
-    return classes.filter(Boolean).join(" ");
+	return classes.filter(Boolean).join(" ");
 }

@@ -4,7 +4,7 @@
  * @returns Una promesa que se resuelve después del retraso
  */
 export async function delay(seg = 10) {
-    return new Promise((res) => setTimeout(() => res(true), seg * 1000));
+	return new Promise((res) => setTimeout(() => res(true), seg * 1000));
 }
 
 /**
@@ -14,7 +14,7 @@ export async function delay(seg = 10) {
  * @returns Un número aleatorio entre start y end
  */
 export function randomNumber(start: number, end: number) {
-    return Math.floor(Math.random() * (end - start + 1)) + start;
+	return Math.floor(Math.random() * (end - start + 1)) + start;
 }
 
 /**
@@ -22,12 +22,12 @@ export function randomNumber(start: number, end: number) {
  * @returns Un string que representa un ID único
  */
 export function generateId() {
-    return Math.random().toString(32) + Date.now().toString(32);
+	return Math.random().toString(32) + Date.now().toString(32);
 }
 
 /**
  * Genera un ID aleatorio
  */
 export function randomId() {
-    return Math.random().toString(32) + Date.now().toString(32);
+	return Math.random().toString(32) + Date.now().toString(32);
 }

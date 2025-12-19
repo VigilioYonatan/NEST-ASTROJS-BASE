@@ -6,21 +6,21 @@ import type { CountrySchema } from "../schemas/country.schema";
 import { type RegionRelations } from "./region.entity";
 
 export const countryEntity = pgTable("country", {
-    id: serial().primaryKey(),
-    code: varchar({ length: 255 }).unique().notNull(),
-    dial_code: varchar({ length: 255 }).unique().notNull(),
-    name: varchar({ length: 255 }).unique().notNull(),
+	id: serial().primaryKey(),
+	code: varchar({ length: 255 }).unique().notNull(),
+	dial_code: varchar({ length: 255 }).unique().notNull(),
+	name: varchar({ length: 255 }).unique().notNull(),
 });
 
 export type CountryEntity = Entity<
-    CountrySchema,
-    InferSelectModel<typeof countryEntity>
+	CountrySchema,
+	InferSelectModel<typeof countryEntity>
 >;
 
 export const countriesRelations = relations(countryEntity, ({ many }) => ({
-    regions: many(schema.region),
+	regions: many(schema.region),
 }));
 
 export type CountryRelations = CountryEntity & {
-    regions?: RegionRelations[];
+	regions?: RegionRelations[];
 };

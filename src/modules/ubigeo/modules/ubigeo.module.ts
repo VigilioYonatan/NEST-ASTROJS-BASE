@@ -4,8 +4,8 @@ import { UbigeoRepository } from "../repositories/ubigeo.repository";
 import { UbigeoSeeder } from "../seeder/ubigeo.seeder";
 import { UbigeoService } from "../services/ubigeo.service";
 @Module({
-    controllers: [UbigeoController],
-    providers: [UbigeoService, UbigeoSeeder, UbigeoRepository],
-    exports: [UbigeoSeeder],
+	controllers: [UbigeoController],
+	providers: [UbigeoService, UbigeoSeeder, UbigeoRepository],
+	exports: [UbigeoSeeder],
 })
 export class UbigeoModule {}

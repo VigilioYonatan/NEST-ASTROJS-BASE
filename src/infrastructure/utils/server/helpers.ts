@@ -2,10 +2,10 @@ import { createWriteStream } from "node:fs";
 import stream from "node:stream";
 import util from "node:util";
 import {
-    Column,
-    desc,
-    type InferInsertModel,
-    type InferSelectModel,
+	Column,
+	desc,
+	type InferInsertModel,
+	type InferSelectModel,
 } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { AnyPgTable, PgDatabase, PgTable } from "drizzle-orm/pg-core";
@@ -14,22 +14,22 @@ const pipeline = util.promisify(stream.pipeline);
 
 /*** random number between*/
 export function randomNumber(start: number, end: number) {
-    return Math.floor(Math.random() * (end - start + 1)) + start;
+	return Math.floor(Math.random() * (end - start + 1)) + start;
 }
 
 export async function downloadFileFetch(url: string, rutaArchivo: string) {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Error: ${res.statusText}`);
-        if (res.body) {
-            await pipeline(
-                res.body as unknown as stream.Readable,
-                createWriteStream(rutaArchivo)
-            );
-        }
-    } catch (err) {
-        throw new Error((err as Error).message);
-    }
+	try {
+		const res = await fetch(url);
+		if (!res.ok) throw new Error(`Error: ${res.statusText}`);
+		if (res.body) {
+			await pipeline(
+				res.body as unknown as stream.Readable,
+				createWriteStream(rutaArchivo),
+			);
+		}
+	} catch (err) {
+		throw new Error((err as Error).message);
+	}
 }
 
 // JWT
@@ -316,270 +316,265 @@ export async function downloadFileFetch(url: string, rutaArchivo: string) {
 // }
 
 interface GenerateCodeOptions {
-    db: NodePgDatabase<any>;
-    Item: AnyPgTable;
-    latestCodeColumn: string;
-    orderByColumn: Column;
-    prefix?: string;
+	db: NodePgDatabase<any>;
+	Item: AnyPgTable;
+	latestCodeColumn: string;
+	orderByColumn: Column;
+	prefix?: string;
 }
 export async function generateCodeEntity({
-    db,
-    Item,
-    latestCodeColumn,
-    orderByColumn,
-    prefix = "",
+	db,
+	Item,
+	latestCodeColumn,
+	orderByColumn,
+	prefix = "",
 }: GenerateCodeOptions) {
-    const latestRow = await db
-        .select({
-            code: Item[latestCodeColumn],
-        })
-        .from(Item)
-        .orderBy(desc(orderByColumn))
-        .limit(1);
+	const latestRow = await db
+		.select({
+			code: Item[latestCodeColumn],
+		})
+		.from(Item)
+		.orderBy(desc(orderByColumn))
+		.limit(1);
 
-    const latestUser = latestRow[0];
-    let code: string | null = null;
-    if (latestUser) {
-        const numericPart = latestUser.code as string;
-        code = incrementCode(numericPart);
-    } else {
-        code = "000001";
-    }
-    return `${prefix}${code}`;
+	const latestUser = latestRow[0];
+	let code: string | null = null;
+	if (latestUser) {
+		const numericPart = latestUser.code as string;
+		code = incrementCode(numericPart);
+	} else {
+		code = "000001";
+	}
+	return `${prefix}${code}`;
 }
 
 export function incrementCode(code: string, increment = 1) {
-    const ultimoNumero = Number.parseInt(code.replace(/\D/g, ""), 10);
-    return `${String(ultimoNumero + increment).padStart(6, "0")}`;
+	const ultimoNumero = Number.parseInt(code.replace(/\D/g, ""), 10);
+	return `${String(ultimoNumero + increment).padStart(6, "0")}`;
 }
 
 type DbConnection = PgDatabase<any, any, any> | any;
 
 // Configuración para la creación
 export type BulkCreateConfig<
-    TTable extends PgTable,
-    TInputData extends object
+	TTable extends PgTable,
+	TInputData extends object,
 > = {
-    table: TTable;
-    data: TInputData[];
-    // Campos a excluir del objeto de entrada antes de insertar
-    excludeFields?: (keyof TInputData)[];
-    // Función para transformar datos antes de insertar (ej: agregar IDs foráneos)
-    beforeCreate?: (
-        item: TInputData,
-        index: number,
-        parent: (Record<string, unknown> & { id: number }) | null
-    ) => InferInsertModel<TTable>;
-    chunkSize?: number;
+	table: TTable;
+	data: TInputData[];
+	// Campos a excluir del objeto de entrada antes de insertar
+	excludeFields?: (keyof TInputData)[];
+	// Función para transformar datos antes de insertar (ej: agregar IDs foráneos)
+	beforeCreate?: (
+		item: TInputData,
+		index: number,
+		parent: (Record<string, unknown> & { id: number }) | null,
+	) => InferInsertModel<TTable>;
+	chunkSize?: number;
 };
 
 // Configuración de relaciones anidadas
 export type RelationConfig = {
-    // El campo en el objeto PADRE que contiene el array de hijos (ej: 'grid_banners')
-    childrenField: string;
-    // El campo en la tabla HIJA que recibe el ID del padre (ej: 'page_id')
-    foreignKeyField: string;
-    // Configuración de la tabla hija
-    config: Omit<BulkCreateConfig<any, any>, "data">;
+	// El campo en el objeto PADRE que contiene el array de hijos (ej: 'grid_banners')
+	childrenField: string;
+	// El campo en la tabla HIJA que recibe el ID del padre (ej: 'page_id')
+	foreignKeyField: string;
+	// Configuración de la tabla hija
+	config: Omit<BulkCreateConfig<any, any>, "data">;
 };
 
 /**
  * Función principal de insersión masiva en cascada
  */
 export async function bulkCreateWithNestedRelations<
-    TTable extends PgTable,
-    TInputData extends object
+	TTable extends PgTable,
+	TInputData extends object,
 >(
-    db: DbConnection, // Pasas db o tx aquí
-    mainConfig: BulkCreateConfig<TTable, TInputData>,
-    relations: RelationConfig[] = []
+	db: DbConnection, // Pasas db o tx aquí
+	mainConfig: BulkCreateConfig<TTable, TInputData>,
+	relations: RelationConfig[] = [],
 ) {
-    const chunkSize = mainConfig.chunkSize || 4000;
+	const chunkSize = mainConfig.chunkSize || 4000;
 
-    // --- FUNCIÓN INTERNA: PROCESAR POR LOTES ---
-    const processInChunks = async <T extends PgTable>(
-        table: T,
-        rows: InferInsertModel<T>[]
-    ): Promise<InferSelectModel<T>[]> => {
-        if (rows.length === 0) return [];
+	// --- FUNCIÓN INTERNA: PROCESAR POR LOTES ---
+	const processInChunks = async <T extends PgTable>(
+		table: T,
+		rows: InferInsertModel<T>[],
+	): Promise<InferSelectModel<T>[]> => {
+		if (rows.length === 0) return [];
 
-        const results: InferSelectModel<T>[] = [];
+		const results: InferSelectModel<T>[] = [];
 
-        for (let i = 0; i < rows.length; i += chunkSize) {
-            const chunk = rows.slice(i, i + chunkSize);
+		for (let i = 0; i < rows.length; i += chunkSize) {
+			const chunk = rows.slice(i, i + chunkSize);
 
-            // Drizzle insert con returning para obtener los IDs
-            const created = await db.insert(table).values(chunk).returning();
+			// Drizzle insert con returning para obtener los IDs
+			const created = await db.insert(table).values(chunk).returning();
 
-            results.push(...created);
-        }
-        return results;
-    };
+			results.push(...created);
+		}
+		return results;
+	};
 
-    // --- LOGICA PRINCIPAL NIVEL 1 (RAÍZ) ---
+	// --- LOGICA PRINCIPAL NIVEL 1 (RAÍZ) ---
 
-    // Preparar datos raíz
-    const rootDataToInsert = mainConfig.data.map((item, index) => {
-        const itemData = { ...item };
+	// Preparar datos raíz
+	const rootDataToInsert = mainConfig.data.map((item, index) => {
+		const itemData = { ...item };
 
-        // Limpiar campos excluidos
-        if (mainConfig.excludeFields) {
-            for (const field of mainConfig.excludeFields) {
-                delete (itemData as any)[field];
-            }
-        }
+		// Limpiar campos excluidos
+		if (mainConfig.excludeFields) {
+			for (const field of mainConfig.excludeFields) {
+				delete (itemData as any)[field];
+			}
+		}
 
-        // Ejecutar hook beforeCreate si existe
-        if (mainConfig.beforeCreate) {
-            return mainConfig.beforeCreate(itemData, index, null);
-        }
+		// Ejecutar hook beforeCreate si existe
+		if (mainConfig.beforeCreate) {
+			return mainConfig.beforeCreate(itemData, index, null);
+		}
 
-        return itemData as InferInsertModel<TTable>;
-    });
+		return itemData as InferInsertModel<TTable>;
+	});
 
-    // Insertar Raíz
-    const rootResults = await processInChunks(
-        mainConfig.table,
-        rootDataToInsert
-    );
+	// Insertar Raíz
+	const rootResults = await processInChunks(mainConfig.table, rootDataToInsert);
 
-    // --- LOGICA RECURSIVA (RELACIONES) ---
-    // Mantenemos el rastro de los padres actuales (datos originales + resultados de BD)
+	// --- LOGICA RECURSIVA (RELACIONES) ---
+	// Mantenemos el rastro de los padres actuales (datos originales + resultados de BD)
 
-    // Parents Data: La data original (que contiene los arrays de hijos)
-    let currentParentsData = mainConfig.data as (Record<string, unknown> & {
-        id: number;
-    })[];
-    // Parents Results: La data insertada en BD (que contiene los nuevos IDs)
-    let currentParentsResults = rootResults as (Record<string, unknown> & {
-        id: number;
-    })[];
+	// Parents Data: La data original (que contiene los arrays de hijos)
+	let currentParentsData = mainConfig.data as (Record<string, unknown> & {
+		id: number;
+	})[];
+	// Parents Results: La data insertada en BD (que contiene los nuevos IDs)
+	let currentParentsResults = rootResults as (Record<string, unknown> & {
+		id: number;
+	})[];
 
-    for (const relation of relations) {
-        const childrenToInsert: any[] = [];
-        // Necesitamos mapear qué hijo pertenece a qué padre para reconstruir la cadena luego
-        const nextParentsData: (Record<string, unknown> & { id: number })[] =
-            [];
-        const parentIndexMap: number[] = []; // Para saber a qué padre pertenece el hijo insertado
+	for (const relation of relations) {
+		const childrenToInsert: any[] = [];
+		// Necesitamos mapear qué hijo pertenece a qué padre para reconstruir la cadena luego
+		const nextParentsData: (Record<string, unknown> & { id: number })[] = [];
+		const parentIndexMap: number[] = []; // Para saber a qué padre pertenece el hijo insertado
 
-        // Iterar sobre cada padre para extraer sus hijos
-        for (const [parentIndex, parentData] of currentParentsData.entries()) {
-            const parentResult = currentParentsResults[parentIndex];
-            const children =
-                (parentData[relation.childrenField] as any[]) || [];
+		// Iterar sobre cada padre para extraer sus hijos
+		for (const [parentIndex, parentData] of currentParentsData.entries()) {
+			const parentResult = currentParentsResults[parentIndex];
+			const children = (parentData[relation.childrenField] as any[]) || [];
 
-            for (const [childIndex, child] of children.entries()) {
-                let childData = { ...child };
+			for (const [childIndex, child] of children.entries()) {
+				let childData = { ...child };
 
-                // 1. Limpieza de campos
-                if (relation.config.excludeFields) {
-                    for (const field of relation.config.excludeFields) {
-                        delete childData[field];
-                    }
-                }
+				// 1. Limpieza de campos
+				if (relation.config.excludeFields) {
+					for (const field of relation.config.excludeFields) {
+						delete childData[field];
+					}
+				}
 
-                // 2. Asignar Foreign Key del Padre
-                // Asumimos que el PK del padre es 'id', si es otro, habría que parametrizarlo
-                childData[relation.foreignKeyField] = parentResult.id;
+				// 2. Asignar Foreign Key del Padre
+				// Asumimos que el PK del padre es 'id', si es otro, habría que parametrizarlo
+				childData[relation.foreignKeyField] = parentResult.id;
 
-                // 3. Before Create Hook
-                if (relation.config.beforeCreate) {
-                    childData = relation.config.beforeCreate(
-                        childData,
-                        childIndex,
-                        parentResult
-                    );
-                }
+				// 3. Before Create Hook
+				if (relation.config.beforeCreate) {
+					childData = relation.config.beforeCreate(
+						childData,
+						childIndex,
+						parentResult,
+					);
+				}
 
-                childrenToInsert.push(childData);
-                nextParentsData.push(child); // Guardamos la data original del hijo para el siguiente nivel
-            }
-        }
+				childrenToInsert.push(childData);
+				nextParentsData.push(child); // Guardamos la data original del hijo para el siguiente nivel
+			}
+		}
 
-        if (childrenToInsert.length > 0) {
-            // Insertar este nivel masivamente
-            const childResults = await processInChunks(
-                relation.config.table,
-                childrenToInsert
-            );
+		if (childrenToInsert.length > 0) {
+			// Insertar este nivel masivamente
+			const childResults = await processInChunks(
+				relation.config.table,
+				childrenToInsert,
+			);
 
-            // Preparar variables para la siguiente iteración del bucle de relaciones
-            currentParentsData = nextParentsData;
-            currentParentsResults = childResults as Record<string, unknown> &
-                {
-                    id: number;
-                }[];
-        } else {
-            // Si no hay hijos en este nivel, se rompe la cadena para los siguientes niveles
-            break;
-        }
-    }
+			// Preparar variables para la siguiente iteración del bucle de relaciones
+			currentParentsData = nextParentsData;
+			currentParentsResults = childResults as Record<string, unknown> &
+				{
+					id: number;
+				}[];
+		} else {
+			// Si no hay hijos en este nivel, se rompe la cadena para los siguientes niveles
+			break;
+		}
+	}
 
-    return rootResults;
+	return rootResults;
 }
 
 export type FiltersPaginator<T extends object> = {
-    limit?: string;
-    offset?: string;
-    search?: string;
+	limit?: string;
+	offset?: string;
+	search?: string;
 } & {
-    filters: {
-        [P in keyof T]?: T[P] extends number
-            ? { min: number; max: number }
-            : T[P] extends Date | undefined
-            ? { from?: string; to?: string; label?: string; preset?: string }
-            : T[P];
-    };
+	filters: {
+		[P in keyof T]?: T[P] extends number
+			? { min: number; max: number }
+			: T[P] extends Date | undefined
+				? { from?: string; to?: string; label?: string; preset?: string }
+				: T[P];
+	};
 };
 
 export interface PaginatorOptions<T extends object> {
-    filters?: FiltersPaginator<T>;
-    cb: (
-        filters: FiltersPaginator<T> & { limit: number; offset: number }
-    ) => Promise<[unknown[], number]>;
+	filters?: FiltersPaginator<T>;
+	cb: (
+		filters: FiltersPaginator<T> & { limit: number; offset: number },
+	) => Promise<[unknown[], number]>;
 }
 export type PaginatorResult<T extends object> = FiltersPaginator<T> & {
-    limit: number;
-    offset: number;
+	limit: number;
+	offset: number;
 };
 export async function paginator<T extends object>(
-    model: string,
-    options: PaginatorOptions<T>
+	model: string,
+	options: PaginatorOptions<T>,
 ) {
-    const { cb, filters } = options;
-    const {
-        offset = "0",
-        limit = "20",
-        search = "",
-        filters: filtersPaginator,
-        ...rest
-    } = filters as FiltersPaginator<T>;
+	const { cb, filters } = options;
+	const {
+		offset = "0",
+		limit = "20",
+		search = "",
+		filters: filtersPaginator,
+		...rest
+	} = filters as FiltersPaginator<T>;
 
-    const offsetConverted = Number(offset);
-    const limitConverted = Number(limit);
-    const searchConverted = search || "";
+	const offsetConverted = Number(offset);
+	const limitConverted = Number(limit);
+	const searchConverted = search || "";
 
-    const [results, count] = await cb({
-        offset: offsetConverted,
-        limit: limitConverted,
-        search: searchConverted,
-        filters: JSON.parse((filtersPaginator as unknown as string) || "{}"),
-        ...rest,
-    } as PaginatorResult<T>);
+	const [results, count] = await cb({
+		offset: offsetConverted,
+		limit: limitConverted,
+		search: searchConverted,
+		filters: JSON.parse((filtersPaginator as unknown as string) || "{}"),
+		...rest,
+	} as PaginatorResult<T>);
 
-    const next = `/api/${model}?offset=${
-        offsetConverted + limitConverted
-    }&limit=${limitConverted}`;
-    const offsetTotal = offsetConverted - limitConverted;
-    const back = `/api/${model}?offset=${offsetTotal}&limit=${limitConverted}`;
+	const next = `/api/${model}?offset=${
+		offsetConverted + limitConverted
+	}&limit=${limitConverted}`;
+	const offsetTotal = offsetConverted - limitConverted;
+	const back = `/api/${model}?offset=${offsetTotal}&limit=${limitConverted}`;
 
-    return {
-        success: true,
-        count,
-        next,
-        previous: offsetTotal >= 0 ? back : null,
-        results,
-    };
+	return {
+		success: true,
+		count,
+		next,
+		previous: offsetTotal >= 0 ? back : null,
+		results,
+	};
 }
 
 /**
@@ -594,15 +589,15 @@ export async function paginator<T extends object>(
  *      xxxxxl:  60 * 60 * 24 * 30// 30 días
  */
 export const cacheTimes = {
-    minute: 60 * 1, //1 minuto
-    minutes10: 60 * 10, //10 minutos
-    minutes30: 60 * 30, //30 minutos
-    hour: 60 * 60, //1 hora
-    hours4: 60 * 60 * 4, //4 horas
-    days1: 60 * 60 * 24, //8 horas
-    days3: 60 * 60 * 24 * 3, //3 dias
-    days7: 60 * 60 * 24 * 7, //7 dias
-    days30: 60 * 60 * 24 * 30, //30 dias
+	minute: 60 * 1, //1 minuto
+	minutes10: 60 * 10, //10 minutos
+	minutes30: 60 * 30, //30 minutos
+	hour: 60 * 60, //1 hora
+	hours4: 60 * 60 * 4, //4 horas
+	days1: 60 * 60 * 24, //8 horas
+	days3: 60 * 60 * 24 * 3, //3 dias
+	days7: 60 * 60 * 24 * 7, //7 dias
+	days30: 60 * 60 * 24 * 30, //30 dias
 };
 
 // export function cacheGetJson<T>(key: string): T | null {
@@ -661,12 +656,12 @@ export const cacheTimes = {
 //     return cachedObj;
 // }
 export type TimeTable =
-    | "all"
-    | "year"
-    | "month"
-    | "week"
-    | "today"
-    | "yesterday";
+	| "all"
+	| "year"
+	| "month"
+	| "week"
+	| "today"
+	| "yesterday";
 
 // export function sorteByTime(empresa: EmpresaEntity, time: TimeTable) {
 //     const {

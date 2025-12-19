@@ -12,23 +12,23 @@ import { LocalStrategy } from "../strategies/local.strategy";
 import { SessionSerializer } from "../strategies/session.serializer";
 
 @Module({
-    imports: [
-        UserModule,
-        PassportModule.register({ session: true }),
-        JwtModule.register({
-            secret: getEnvironments().JWT_KEY,
-            signOptions: { expiresIn: "30d" }, // Default expiration
-        }),
-    ],
-    controllers: [AuthController],
-    providers: [
-        AuthService,
-        LocalStrategy,
-        GoogleStrategy,
-        JwtStrategy,
-        SessionSerializer,
-        HybridAuthGuard,
-    ],
-    exports: [AuthService, JwtModule],
+	imports: [
+		UserModule,
+		PassportModule.register({ session: true }),
+		JwtModule.register({
+			secret: getEnvironments().JWT_KEY,
+			signOptions: { expiresIn: "30d" }, // Default expiration
+		}),
+	],
+	controllers: [AuthController],
+	providers: [
+		AuthService,
+		LocalStrategy,
+		GoogleStrategy,
+		JwtStrategy,
+		SessionSerializer,
+		HybridAuthGuard,
+	],
+	exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

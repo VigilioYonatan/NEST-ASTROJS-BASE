@@ -5,6 +5,6 @@ import { z } from "@infrastructure/config/zod-i18n.config";
  * @param timestamps El objeto con timestamps a validar
  */
 export const timestampsObject = z.object({
-    created_at: z.date().optional(),
-    updated_at: z.date().optional(),
+	created_at: z.date().optional(),
+	updated_at: z.date().optional(),
 });

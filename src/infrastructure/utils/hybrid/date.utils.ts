@@ -18,12 +18,12 @@ dayjs.extend(duration);
  * @param date La fecha
  */
 export function getHour(
-    date: Date | string,
-    empresa: EmpresaSchemaFromServer | null = null
+	date: Date | string,
+	empresa: EmpresaSchemaFromServer | null = null,
 ): string {
-    return dayjs(date)
-        .tz(empresa?.timezone || TIMEZONE_DEFAULT!)
-        .format("HH:mm");
+	return dayjs(date)
+		.tz(empresa?.timezone || TIMEZONE_DEFAULT!)
+		.format("HH:mm");
 }
 
 /**
@@ -32,80 +32,80 @@ export function getHour(
  * @param format El formato de la fecha
  */
 export function formatDateTz(
-    date: Date,
-    // format = "D [de] MMMM [de] YYYY, hh:mm A",
-    format = "DD/MM/YYYY, HH:mm A",
-    empresa: EmpresaSchemaFromServer | null = null
+	date: Date,
+	// format = "D [de] MMMM [de] YYYY, hh:mm A",
+	format = "DD/MM/YYYY, HH:mm A",
+	empresa: EmpresaSchemaFromServer | null = null,
 ) {
-    return dayjs(date)
-        .tz(empresa?.timezone || TIMEZONE_DEFAULT!)
-        .format(format);
+	return dayjs(date)
+		.tz(empresa?.timezone || TIMEZONE_DEFAULT!)
+		.format(format);
 }
 
 export function formatDateUTC(
-    date: Date | string,
-    format = "DD/MM/YYYY, HH:mm A"
+	date: Date | string,
+	format = "DD/MM/YYYY, HH:mm A",
 ) {
-    return dayjs(date).utc().format(format);
+	return dayjs(date).utc().format(format);
 }
 
 export function formatDateTzUTC(
-    date: Date | string,
-    empresa: EmpresaSchemaFromServer | null = null
+	date: Date | string,
+	empresa: EmpresaSchemaFromServer | null = null,
 ) {
-    return dayjs(date).tz(empresa?.timezone || TIMEZONE_DEFAULT!);
+	return dayjs(date).tz(empresa?.timezone || TIMEZONE_DEFAULT!);
 }
 
 // 21-10-1998
 export function formatInput(date: Date) {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
 
-    return `${year}-${month}-${day}`;
+	return `${year}-${month}-${day}`;
 }
 
 export function now() {
-    return dayjs().tz();
+	return dayjs().tz();
 }
 
 // formatoTemporizadorFlexible , pasas minutos y te da el formato que quieras
 export function formatoTemporizadorFlexible(
-    minutos: number,
-    segundos = 0,
-    formato = "HH:MM:SS"
+	minutos: number,
+	segundos = 0,
+	formato = "HH:MM:SS",
 ) {
-    // Convertimos todo a segundos y redondeamos para evitar decimales
-    const totalSegundos = Math.floor(minutos * 60 + segundos);
+	// Convertimos todo a segundos y redondeamos para evitar decimales
+	const totalSegundos = Math.floor(minutos * 60 + segundos);
 
-    const horas = Math.floor(totalSegundos / 3600);
-    const mins = Math.floor((totalSegundos % 3600) / 60);
-    const secs = totalSegundos % 60; // ya es entero
+	const horas = Math.floor(totalSegundos / 3600);
+	const mins = Math.floor((totalSegundos % 3600) / 60);
+	const secs = totalSegundos % 60; // ya es entero
 
-    const valores = {
-        HH: horas.toString().padStart(2, "0"),
-        H: horas.toString(),
-        MM: mins.toString().padStart(2, "0"),
-        M: mins.toString(),
-        SS: secs.toString().padStart(2, "0"),
-        S: secs.toString(),
-        hh: (horas % 12 || 12).toString().padStart(2, "0"),
-        h: (horas % 12 || 12).toString(),
-    };
+	const valores = {
+		HH: horas.toString().padStart(2, "0"),
+		H: horas.toString(),
+		MM: mins.toString().padStart(2, "0"),
+		M: mins.toString(),
+		SS: secs.toString().padStart(2, "0"),
+		S: secs.toString(),
+		hh: (horas % 12 || 12).toString().padStart(2, "0"),
+		h: (horas % 12 || 12).toString(),
+	};
 
-    return formato.replace(
-        /HH|H|MM|M|SS|S|hh|h/g,
-        (match: string) => valores[match as keyof typeof valores]
-    );
+	return formato.replace(
+		/HH|H|MM|M|SS|S|hh|h/g,
+		(match: string) => valores[match as keyof typeof valores],
+	);
 }
 
 export function showTime(
-    date: Date | string,
-    empresa: EmpresaSchemaFromServer | null = null
+	date: Date | string,
+	empresa: EmpresaSchemaFromServer | null = null,
 ) {
-    return dayjs()
-        .tz(empresa?.timezone || TIMEZONE_DEFAULT!)
-        .to(date);
+	return dayjs()
+		.tz(empresa?.timezone || TIMEZONE_DEFAULT!)
+		.to(date);
 }
 
 export default dayjs;

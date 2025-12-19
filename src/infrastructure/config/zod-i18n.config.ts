@@ -3,7 +3,7 @@ import { z } from "zod";
 
 // Initialize  with Spanish translations for Zod
 i18next.init({
-    lng: "es",
+	lng: "es",
 });
 
 z.config(z.locales.es());

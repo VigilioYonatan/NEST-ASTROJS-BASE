@@ -6,31 +6,31 @@ import type { EmpresaUpdateDto } from "../dtos/empresa-update.dto";
  * @method PUT
  */
 export function empresaUpdateApi() {
-    return useMutation<
-        EmpresaUpdateApiResult,
-        EmpresaUpdateDto,
-        EmpresaUpdateApiError
-    >("/empresa", async (url, body) => {
-        const response = await fetch(`/api${url}`, {
-            method: "PUT",
-            body: JSON.stringify(body),
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            throw result;
-        }
-        return result;
-    });
+	return useMutation<
+		EmpresaUpdateApiResult,
+		EmpresaUpdateDto,
+		EmpresaUpdateApiError
+	>("/empresa", async (url, body) => {
+		const response = await fetch(`/api${url}`, {
+			method: "PUT",
+			body: JSON.stringify(body),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		const result = await response.json();
+		if (!response.ok) {
+			throw result;
+		}
+		return result;
+	});
 }
 interface EmpresaUpdateApiResult {
-    success: true;
-    message: string;
+	success: true;
+	message: string;
 }
 interface EmpresaUpdateApiError {
-    success: false;
-    message: string;
-    body: keyof EmpresaUpdateDto;
+	success: false;
+	message: string;
+	body: keyof EmpresaUpdateDto;
 }

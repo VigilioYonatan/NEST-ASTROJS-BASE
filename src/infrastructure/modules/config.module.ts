@@ -18,15 +18,15 @@ import { ConfigModule } from "@nestjs/config";
  * }
  */
 @Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal: true,
-            load: [getEnvironments],
-            envFilePath: [".env"],
-            cache: true,
-            expandVariables: true,
-        }),
-    ],
-    exports: [ConfigModule],
+	imports: [
+		ConfigModule.forRoot({
+			isGlobal: true,
+			load: [getEnvironments],
+			envFilePath: [".env"],
+			cache: true,
+			expandVariables: true,
+		}),
+	],
+	exports: [ConfigModule],
 })
 export class AppConfigModule {}

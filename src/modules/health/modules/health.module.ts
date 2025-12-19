@@ -15,8 +15,8 @@ import { HealthService } from "../services/health.service";
  * - Monitoring and alerting systems
  */
 @Module({
-    imports: [TerminusModule, HttpModule, RustFSModule],
-    controllers: [HealthController],
-    providers: [HealthService],
+	imports: [TerminusModule, HttpModule, RustFSModule],
+	controllers: [HealthController],
+	providers: [HealthService],
 })
 export class HealthModule {}

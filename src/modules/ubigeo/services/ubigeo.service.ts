@@ -8,32 +8,27 @@ import { UbigeoRepository } from "../repositories/ubigeo.repository";
 
 @Injectable()
 export class UbigeoService {
-    constructor(
-        private readonly ubigeoRepository: UbigeoRepository,
-        @Inject(CACHE_MANAGER) private readonly cache: Cache,
-        private readonly cacheService: CacheService
-    ) {}
+	constructor(
+		private readonly ubigeoRepository: UbigeoRepository,
+		@Inject(CACHE_MANAGER) private readonly cache: Cache,
+		private readonly cacheService: CacheService,
+	) {}
 
-    async index() {
-        let data =
-            await this.cacheService.cacheGetJson<CountryRelations | null>(
-                "ubigeo"
-            );
+	async index() {
+		let data = await this.cacheService.cacheGetJson<CountryRelations | null>(
+			"ubigeo",
+		);
 
-        if (!data) {
-            data = await this.ubigeoRepository.findPeruWithRegionsAndCities();
-            if (data) {
-                await this.cache.set(
-                    "ubigeo",
-                    JSON.stringify(data),
-                    cacheTimes.days30
-                );
-            }
-        }
+		if (!data) {
+			data = await this.ubigeoRepository.findPeruWithRegionsAndCities();
+			if (data) {
+				await this.cache.set("ubigeo", JSON.stringify(data), cacheTimes.days30);
+			}
+		}
 
-        return {
-            success: true,
-            data,
-        };
-    }
+		return {
+			success: true,
+			data,
+		};
+	}
 }

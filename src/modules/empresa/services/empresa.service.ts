@@ -7,22 +7,22 @@ import type { EmpresaSchemaFromServer } from "../schemas/empresa.schema";
 
 @Injectable()
 export class EmpresaService {
-    constructor(
-        private readonly empresaRepository: EmpresaRepository,
-        @Inject(CACHE_MANAGER) private readonly cache: Cache
-    ) {}
+	constructor(
+		private readonly empresaRepository: EmpresaRepository,
+		@Inject(CACHE_MANAGER) private readonly cache: Cache,
+	) {}
 
-    async update(
-        user: UserAuth,
-        empresa: EmpresaSchemaFromServer,
-        body: EmpresaUpdateDto
-    ) {
-        await this.empresaRepository.update(empresa.id, user.id, body);
+	async update(
+		user: UserAuth,
+		empresa: EmpresaSchemaFromServer,
+		body: EmpresaUpdateDto,
+	) {
+		await this.empresaRepository.update(empresa.id, user.id, body);
 
-        await this.cache.delete("empresa");
-        return {
-            success: true,
-            message: "Empresa actualizada correctamente",
-        };
-    }
+		await this.cache.delete("empresa");
+		return {
+			success: true,
+			message: "Empresa actualizada correctamente",
+		};
+	}
 }

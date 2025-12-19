@@ -5,8 +5,8 @@ import { UploadController } from "../controllers/upload.controller";
 import { UploadService } from "../services/upload.service";
 
 @Module({
-    imports: [AppConfigModule, RustFSModule],
-    controllers: [UploadController],
-    providers: [UploadService],
+	imports: [AppConfigModule, RustFSModule],
+	controllers: [UploadController],
+	providers: [UploadService],
 })
 export class UploadModule {}

@@ -2,6 +2,7 @@ import { createContext, type JSX } from "preact";
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 
 export const FormControlContext = createContext(
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	{} as UseFormReturn<any, unknown, FieldValues>,
 );
 

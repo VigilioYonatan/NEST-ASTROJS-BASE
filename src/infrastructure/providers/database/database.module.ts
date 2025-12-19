@@ -9,24 +9,23 @@ export const DRIZZLE = Symbol("DRIZZLE_CONNECTION");
 
 @Global()
 @Module({
-    imports: [ConfigModule],
-    providers: [
-        {
-            provide: DRIZZLE,
-            inject: [ConfigService],
-            useFactory: async (configService: ConfigService<Environments>) => {
-                const pool = new Pool({
-                    connectionString: configService.getOrThrow("DATABASE_URL"),
-                });
-                const db = drizzle(pool, {
-                    schema,
-                    logger:
-                        configService.getOrThrow("NODE_ENV") === "development",
-                });
-                return db;
-            },
-        },
-    ],
-    exports: [DRIZZLE],
+	imports: [ConfigModule],
+	providers: [
+		{
+			provide: DRIZZLE,
+			inject: [ConfigService],
+			useFactory: async (configService: ConfigService<Environments>) => {
+				const pool = new Pool({
+					connectionString: configService.getOrThrow("DATABASE_URL"),
+				});
+				const db = drizzle(pool, {
+					schema,
+					logger: configService.getOrThrow("NODE_ENV") === "development",
+				});
+				return db;
+			},
+		},
+	],
+	exports: [DRIZZLE],
 })
 export class DatabaseModule {}

@@ -3,8 +3,8 @@ import { AppConfigModule } from "../../modules/config.module";
 import { RustFSService } from "./rustfs.service";
 
 @Module({
-    imports: [AppConfigModule],
-    providers: [RustFSService],
-    exports: [RustFSService],
+	imports: [AppConfigModule],
+	providers: [RustFSService],
+	exports: [RustFSService],
 })
 export class RustFSModule {}

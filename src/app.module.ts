@@ -14,41 +14,41 @@ import { UploadModule } from "@modules/uploads/modules/upload.module";
 import { UserModule } from "@modules/user/modules/user.module";
 import { WebModule } from "@modules/web/modules/web.module";
 import {
-    type MiddlewareConsumer,
-    Module,
-    type NestModule,
+	type MiddlewareConsumer,
+	Module,
+	type NestModule,
 } from "@nestjs/common";
 import { APP_FILTER } from "@nestjs/core";
 import { ThrottlerModule } from "@nestjs/throttler";
 
 @Module({
-    imports: [
-        AppConfigModule,
-        AppCacheModule,
-        AppLoggerModule,
-        DatabaseModule,
-        ThrottlerModule.forRoot([
-            {
-                ttl: 60000, // 1 minute
-                limit: 100, // 100 requests per minute
-            },
-        ]),
-        UserModule,
-        UbigeoModule,
-        UploadModule,
-        WebModule,
-        AuthModule,
-        HealthModule,
-        EmpresaModule,
-        IconModule,
-    ],
-    providers: [
-        { provide: APP_FILTER, useClass: DrizzleExceptionFilter },
-        { provide: APP_FILTER, useClass: HttpExceptionFilter },
-    ],
+	imports: [
+		AppConfigModule,
+		AppCacheModule,
+		AppLoggerModule,
+		DatabaseModule,
+		ThrottlerModule.forRoot([
+			{
+				ttl: 60000, // 1 minute
+				limit: 100, // 100 requests per minute
+			},
+		]),
+		UserModule,
+		UbigeoModule,
+		UploadModule,
+		WebModule,
+		AuthModule,
+		HealthModule,
+		EmpresaModule,
+		IconModule,
+	],
+	providers: [
+		{ provide: APP_FILTER, useClass: DrizzleExceptionFilter },
+		{ provide: APP_FILTER, useClass: HttpExceptionFilter },
+	],
 })
 export class AppModule implements NestModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer.apply(InitialCacheMiddleware).forRoutes("*"); // <--- Aplica a TODO
-    }
+	configure(consumer: MiddlewareConsumer) {
+		consumer.apply(InitialCacheMiddleware).forRoutes("*"); // <--- Aplica a TODO
+	}
 }

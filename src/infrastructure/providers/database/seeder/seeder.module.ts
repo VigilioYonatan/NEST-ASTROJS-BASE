@@ -7,13 +7,13 @@ import { AppModule } from "@src/app.module";
 import { SeederService } from "./seeder.service";
 
 @Module({
-    imports: [AppModule],
-    providers: [
-        SeederService,
-        UbigeoSeeder,
-        EmpresaSeeder,
-        UserSeeder,
-        AddressSeeder,
-    ],
+	imports: [AppModule],
+	providers: [
+		SeederService,
+		UbigeoSeeder,
+		EmpresaSeeder,
+		UserSeeder,
+		AddressSeeder,
+	],
 })
 export class SeederModule {}

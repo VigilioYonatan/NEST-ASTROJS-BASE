@@ -14,17 +14,17 @@ import FormSelectInput from "./form-select-input";
 export * from "./libs";
 
 const Form = Object.assign(VigilioForm, {
-    control: Object.assign(FormControl, {
-        file: FormFile,
-        toggle: FormToggle,
-        select: FormSelect,
-        area: FormControlArea,
-        array: FormArray,
-        check: FormCheck,
-        selectInput: FormSelectInput,
-        color: FormColor,
-        button: FormButton,
-    }),
-    button: { submit: FormButtonSubmit },
+	control: Object.assign(FormControl, {
+		file: FormFile,
+		toggle: FormToggle,
+		select: FormSelect,
+		area: FormControlArea,
+		array: FormArray,
+		check: FormCheck,
+		selectInput: FormSelectInput,
+		color: FormColor,
+		button: FormButton,
+	}),
+	button: { submit: FormButtonSubmit },
 });
 export default Form;

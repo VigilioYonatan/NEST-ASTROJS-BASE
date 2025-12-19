@@ -6,21 +6,21 @@ import type { CountryRelations } from "../entities/country.entity";
 
 @Injectable()
 export class UbigeoRepository {
-    constructor(
-        @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>
-    ) {}
+	constructor(
+		@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+	) {}
 
-    async findPeruWithRegionsAndCities(): Promise<CountryRelations | null> {
-        const result = await this.db.query.country.findFirst({
-            where: eq(schema.country.dial_code, "51"),
-            with: {
-                regions: {
-                    with: {
-                        cities: true,
-                    },
-                },
-            },
-        });
-        return (result as CountryRelations) || null;
-    }
+	async findPeruWithRegionsAndCities(): Promise<CountryRelations | null> {
+		const result = await this.db.query.country.findFirst({
+			where: eq(schema.country.dial_code, "51"),
+			with: {
+				regions: {
+					with: {
+						cities: true,
+					},
+				},
+			},
+		});
+		return (result as CountryRelations) || null;
+	}
 }
