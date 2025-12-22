@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:25-alpine AS base
 
 # 1. Instalar dumb-init y actualizaciones
 RUN apk update && apk upgrade --no-cache && apk add --no-cache dumb-init
