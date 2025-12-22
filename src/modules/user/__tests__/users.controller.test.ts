@@ -12,13 +12,14 @@ describe("UserController (Integration)", () => {
 	let userService: UserService;
 
 	beforeAll(async () => {
+		// console.log("DEBUG: UserService token:", UserService);
+
 		const moduleFixture: TestingModule = await Test.createTestingModule({
 			controllers: [UserController],
 			providers: [
 				{
 					provide: UserService,
 					useValue: {
-						index: vi.fn(),
 						show: vi.fn(),
 						store: vi.fn(),
 						update: vi.fn(),
@@ -42,28 +43,14 @@ describe("UserController (Integration)", () => {
 		await app.close();
 	});
 
-	describe("GET /user", () => {
-		it("should return an array of users", async () => {
-			const result = { success: true, data: [] };
-			vi.spyOn(userService, "index").mockResolvedValue(result as any);
-
-			return request(app.getHttpServer())
-				.get("/user")
-				.expect(200)
-				.expect((res) => {
-					expect(res.body).toEqual(result);
-					expect(userService.index).toHaveBeenCalled();
-				});
-		});
-	});
-
 	describe("GET /user/:id", () => {
 		it("should return a single user", async () => {
 			const result = {
 				success: true,
-				data: { id: 1, name: "Test User" },
+				user: { id: 1, name: "Test User" },
 			};
-			vi.spyOn(userService, "show").mockResolvedValue(result as any);
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+			vi.mocked(userService.show).mockResolvedValue(result as any);
 
 			return request(app.getHttpServer())
 				.get("/user/1")
@@ -97,14 +84,15 @@ describe("UserController (Integration)", () => {
 				is_register_automatic: false,
 				status: "activo",
 				estudiante_status: "activo",
-				// Required nullable fields
 				profesion: null,
 				presentation: null,
 				photo: null,
 				wallpaper: null,
+				subscription: null,
 			};
-			const result = { success: true, data: { id: 1, ...dto } };
-			vi.spyOn(userService, "store").mockResolvedValue(result as any);
+			const result = { success: true, user: { id: 1, ...dto } };
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+			vi.mocked(userService.store).mockResolvedValue(result as any);
 
 			return request(app.getHttpServer())
 				.post("/user")

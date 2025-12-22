@@ -149,11 +149,3 @@ export function validateEnvironments(): void {
 	// biome-ignore lint/suspicious/noConsole: Log informativo de inicio
 	console.log(`✅ [ENVIRONMENTS] Validado correctamente (${mode})`);
 }
-
-/**
- * Retorna las variables de entorno para ConfigModule de NestJS.
- * Compatible con ConfigModule.forRoot({ load: [environments] })
- */
-export default function environments(): Environments {
-	return getEnvironments();
-}

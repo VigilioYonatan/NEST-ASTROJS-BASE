@@ -1,12 +1,12 @@
 import {
-	getEnvironments,
 	helmetConfig,
 	validateEnvironments,
 } from "@infrastructure/config/server";
 import { astroProxy } from "@infrastructure/utils/server";
-import { setupSession } from "@modules/auth/config/session.config";
+import { SessionConfigService } from "@modules/auth/config/session.config";
 import { WebPath } from "@modules/web/routers/web.routers";
 import { VersioningType } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { apiReference } from "@scalar/nestjs-api-reference";
@@ -20,13 +20,18 @@ async function bootstrap() {
 
 	const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
+	// get configService environment
+	const configService = app.get(ConfigService);
+	const corsOrigins = configService.getOrThrow<string>("CORS_ORIGINS");
+	const port = configService.getOrThrow<number>("PORT");
+
+	// Logger
 	app.useLogger(app.get(Logger));
 
 	// Security Headers
-	app.use(helmet(helmetConfig()));
+	app.use(helmet(helmetConfig(configService)));
 
 	// Enable CORS
-	const corsOrigins = getEnvironments().CORS_ORIGINS;
 	app.enableCors({
 		origin:
 			corsOrigins === "*" ? "*" : corsOrigins.split(",").map((s) => s.trim()),
@@ -58,21 +63,16 @@ async function bootstrap() {
 	);
 
 	// Session & Passport Configuration
-	setupSession(app);
+	const sessionConfig = app.get(SessionConfigService);
+	sessionConfig.setup(app);
 
 	// Start on port
 
-	const server = await app.listen(getEnvironments().PORT);
+	const server = await app.listen(port);
 	server.on("upgrade", astroProxy.upgrade);
 	// biome-ignore lint/suspicious/noConsole: Startup log
-	console.log(
-		`Application is running on: http://localhost:${getEnvironments().PORT}`,
-	);
+	console.log(`Application is running on: http://localhost:${port}`);
 	// biome-ignore lint/suspicious/noConsole: Startup log
-	console.log(
-		`Swagger Docs available at: http://localhost:${
-			getEnvironments().PORT
-		}/reference`,
-	);
+	console.log(`Swagger Docs available at: http://localhost:${port}/reference`);
 }
 bootstrap();

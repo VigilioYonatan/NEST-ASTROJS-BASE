@@ -1,5 +1,4 @@
 import { ZodPipe } from "@infrastructure/pipes/zod.pipe";
-import { Roles } from "@modules/auth/decorators/roles.decorator";
 import { AuthenticatedGuard } from "@modules/auth/guards/authenticated.guard";
 import { RolesGuard } from "@modules/auth/guards/roles.guard";
 import {
@@ -7,6 +6,7 @@ import {
 	Controller,
 	Delete,
 	Get,
+	Inject,
 	Param,
 	ParseIntPipe,
 	Patch,
@@ -31,18 +31,7 @@ import { UserService } from "../services/user.service";
 @UseGuards(AuthenticatedGuard, RolesGuard)
 @Controller("/user")
 export class UserController {
-	constructor(private readonly userService: UserService) {}
-
-	@ApiOperation({ summary: "Get all users" })
-	@ApiResponse({
-		status: 200,
-		description: "List of users retrieved successfully.",
-	})
-	@Roles("super-admin", "administracion")
-	@Get("/")
-	index() {
-		return this.userService.index();
-	}
+	constructor(@Inject(UserService) private readonly userService: UserService) {}
 
 	@ApiOperation({ summary: "Create a new user" })
 	@ApiBody({ type: UserStoreDto, description: "User creation data" })

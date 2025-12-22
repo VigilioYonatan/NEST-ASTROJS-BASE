@@ -1,7 +1,10 @@
+import type { ConfigService } from "@nestjs/config";
 import type { HelmetOptions } from "helmet";
-import { getEnvironments } from "./environments.config";
+import { type Environments, getEnvironments } from "./environments.config";
 
-export function helmetConfig(): HelmetOptions {
+export function helmetConfig(
+	configService: ConfigService<Environments>,
+): HelmetOptions {
 	return {
 		contentSecurityPolicy: {
 			// Configura aunque sea una política básica
@@ -9,7 +12,7 @@ export function helmetConfig(): HelmetOptions {
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					`http://localhost:${getEnvironments().PUBLIC_PORT}`, // Permite scripts desde Vite (dev)
+					`http://localhost:${configService.getOrThrow("PUBLIC_PORT")}`, // Permite scripts desde Vite (dev)
 					"'unsafe-inline'", // Necesario para Vite en desarrollo
 					"'unsafe-eval'", // Necesario para HMR (Hot Module Replacement)
 					"https://www.google.com", // Allow Google domains
@@ -23,8 +26,8 @@ export function helmetConfig(): HelmetOptions {
 				],
 				connectSrc: [
 					"'self'",
-					`http://localhost:${getEnvironments().PUBLIC_PORT}`, // Permite conexiones a Vite (websockets)
-					`ws://${getEnvironments().PUBLIC_URL}`, // WebSockets para HMR
+					`http://localhost:${configService.getOrThrow("PUBLIC_PORT")}`, // Permite conexiones a Vite (websockets)
+					`ws://${configService.getOrThrow("PUBLIC_URL")}`, // WebSockets para HMR
 					"https://cearlatinoamericano.pe",
 					"wss://cearlatinoamericano.pe",
 					"ws://campus.cearlatinoamericano.pe",

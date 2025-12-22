@@ -5,6 +5,7 @@ import { AppConfigModule } from "@infrastructure/modules/config.module";
 import { AppCacheModule } from "@infrastructure/providers/cache";
 import { DatabaseModule } from "@infrastructure/providers/database";
 import { AppLoggerModule } from "@infrastructure/providers/logger";
+import { SessionConfigService } from "@modules/auth/config/session.config";
 import { AuthModule } from "@modules/auth/modules/auth.module";
 import { EmpresaModule } from "@modules/empresa/modules/empresa.module";
 import { IconModule } from "@modules/empresa/modules/icon.module";
@@ -43,6 +44,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 		IconModule,
 	],
 	providers: [
+		SessionConfigService,
 		{ provide: APP_FILTER, useClass: DrizzleExceptionFilter },
 		{ provide: APP_FILTER, useClass: HttpExceptionFilter },
 	],

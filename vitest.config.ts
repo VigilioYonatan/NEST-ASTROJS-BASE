@@ -32,6 +32,7 @@ export default defineConfig({
 			],
 		},
 	},
+	// plugins: [swc.vite({ xclude: ["node_modules/**"] })],
 	resolve: {
 		alias: {
 			"@modules": path.join(__dirname, "src", "modules"),

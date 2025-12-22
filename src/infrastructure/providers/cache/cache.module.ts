@@ -5,6 +5,7 @@ import { Global, Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import Keyv from "keyv";
+import { getRedisUrl } from "./cache.connection";
 import { CacheService } from "./cache.service";
 
 @Global()
@@ -21,14 +22,7 @@ import { CacheService } from "./cache.service";
 				let storage: KeyvRedis<unknown> | undefined;
 
 				if (isProduction) {
-					const host = configService.get("REDIS_HOST");
-					const port = configService.get("REDIS_PORT") || 6379;
-					const password = configService.get("REDIS_PASSWORD");
-					const redisUrl = password
-						? `redis://:${password}@${host}:${port}`
-						: `redis://${host}:${port}`;
-
-					storage = new KeyvRedis(redisUrl);
+					storage = new KeyvRedis(getRedisUrl(configService));
 				}
 
 				// Creamos una única instancia de Keyv

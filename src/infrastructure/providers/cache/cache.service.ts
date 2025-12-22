@@ -1,19 +1,21 @@
-import { DRIZZLE } from "@infrastructure/providers/database";
-import { cacheTimes } from "@infrastructure/utils/server";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Cache } from "cache-manager";
-import { eq, isNull, or, sql } from "drizzle-orm"; // Operadores de Drizzle
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgTableWithColumns } from "drizzle-orm/pg-core";
-import type { schema } from "../database";
 
 @Injectable()
 export class CacheService {
-	constructor(
-		@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
-		@Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-	) {}
+	public readonly CACHE_TIMES = {
+		MINUTE: 60 * 1, //1 minuto
+		MINUTES_10: 60 * 10, //10 minutos
+		MINUTES_30: 60 * 30, //30 minutos
+		HOUR: 60 * 60, //1 hora
+		HOURS_4: 60 * 60 * 4, //4 horas
+		DAYS_1: 60 * 60 * 24, //8 horas
+		DAYS_3: 60 * 60 * 24 * 3, //3 dias
+		DAYS_7: 60 * 60 * 24 * 7, //7 dias
+		DAYS_30: 60 * 60 * 24 * 30, //30 dias
+	};
+	constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
 	async get<T>(key: string): Promise<T | undefined> {
 		return await this.cacheManager.get<T>(key);
 	}
@@ -41,75 +43,6 @@ export class CacheService {
 		}
 	}
 
-	// 2️⃣ Función adaptada para Drizzle (getByIdCache)
-	/**
-	 * Busca la ID de una entidad por su ID, slug o code, usando caché de por medio.
-	 * Si encuentra la ID en la DB, la guarda en caché antes de devolverla.
-	 * @param tableSchema El objeto de esquema de Drizzle para la tabla (e.g., schema.file)
-	 * @param idValue El valor a buscar (puede ser ID, slug, o code)
-	 * @param searchFields Los campos de la tabla a buscar (e.g., ['id', 'slug', 'code'])
-	 * @returns La ID encontrada como string, o null.
-	 */
-	async getByIdCache(
-		tableSchema: PgTableWithColumns<any>,
-		idValue: string | number,
-		searchFields: string[],
-	): Promise<string | null> {
-		const tableName = tableSchema.meta.name;
-		const cacheKey = `${tableName.toLowerCase()}_id:${idValue}`;
-
-		//  Intentamos usar cache por id
-		const cachedId = await this.cacheManager.get<string>(cacheKey);
-		if (cachedId) return cachedId;
-
-		// --- Lógica de Búsqueda en DB (Drizzle) ---
-		let idAsNumber: number | string = idValue;
-		if (!Number.isNaN(Number(idValue))) {
-			idAsNumber = Number(idValue);
-		}
-
-		// 2️⃣ Construcción de la cláusula WHERE con Op.or (operador 'or' de Drizzle)
-		const conditions = searchFields
-			.map((field) => {
-				const tableColumn = tableSchema[field];
-
-				if (!tableColumn) {
-					// biome-ignore lint/suspicious/noConsole: <explanation>
-					console.warn(
-						`Field '${field}' not found in Drizzle schema for table '${tableName}'. Skipping.`,
-					);
-					return isNull(sql`1`); // Devuelve una condición falsa si el campo no existe
-				}
-
-				// Drizzle usa 'eq' (equals)
-				if (field === "id") {
-					// Si el ID es válido numéricamente, lo buscamos. Si no, lo buscamos como 0 para fallar.
-					const finalId = Number.isNaN(Number(idValue)) ? 0 : idAsNumber;
-					return eq(tableColumn, finalId);
-				}
-
-				// Para otros campos (slug, code), buscamos el valor tal cual
-				return eq(tableColumn, idValue as string);
-			})
-			.filter((cond) => !isNull(cond)); // Filtra condiciones que no se pudieron generar
-
-		const whereClause = or(...conditions);
-
-		// 3️⃣ Buscar en DB por id, slug o code
-		const [dbResult] = await this.db
-			.select({ id: tableSchema.id }) // SELECT id
-			.from(tableSchema)
-			.where(whereClause)
-			.limit(1);
-
-		if (!dbResult) return null;
-
-		const foundId = dbResult.id.toString();
-
-		await this.cacheManager.set(cacheKey, foundId, cacheTimes.days7);
-
-		return foundId;
-	}
 	// --- HEALTH CHECK ---
 	async checkHealth(): Promise<boolean> {
 		try {
@@ -121,5 +54,9 @@ export class CacheService {
 			console.error("Redis Health Check Failed:", error);
 			return false;
 		}
+	}
+
+	async resetCache(): Promise<void> {
+		await this.cacheManager.clear();
 	}
 }

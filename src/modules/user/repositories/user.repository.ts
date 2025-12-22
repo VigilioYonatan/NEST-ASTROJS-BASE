@@ -1,56 +1,46 @@
 import { DRIZZLE, schema } from "@infrastructure/providers/database";
-import { generateId, slugify } from "@infrastructure/utils/hybrid";
-import { generateCodeEntity } from "@infrastructure/utils/server";
+import { toNull } from "@infrastructure/utils/server";
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { UserStoreDto } from "../dtos/user-store.dto";
-import type { UserUpdateDto } from "../dtos/user-update.dto";
 import { userEntity } from "../entities/user.entity";
+import type {
+	UserFindByEmailToLogin,
+	UserSchema,
+} from "../schemas/user.schema";
 
 @Injectable()
 export class UserRepository {
 	constructor(
-		@Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
+		@Inject(DRIZZLE) public readonly db: NodePgDatabase<typeof schema>,
 	) {}
 
-	async index() {
-		const result = await this.db.query.user.findMany();
-		return result;
-	}
-
-	async show(id: number) {
+	async show(id: number): Promise<UserSchema | null> {
 		const result = await this.db.query.user.findFirst({
 			where: eq(userEntity.id, id),
 		});
-		return result;
+		return toNull(result);
 	}
 
-	async findByEmail(email: string) {
+	async findByEmailToLogin(
+		email: string,
+	): Promise<UserFindByEmailToLogin | null> {
 		const result = await this.db.query.user.findFirst({
 			where: eq(userEntity.email, email),
+			columns: {
+				id: true,
+				email: true,
+				password: true,
+			},
 		});
-		return result;
+		return toNull(result);
 	}
 
-	async store(body: UserStoreDto) {
-		const code = await generateCodeEntity({
-			db: this.db,
-			Item: userEntity,
-			latestCodeColumn: "code",
-			orderByColumn: userEntity.id,
-			prefix: "USER-",
-		});
-		const slug = slugify(
-			body.user_name ||
-				`${body.full_name}${body.father_lastname}${generateId().slice(4)}`,
-		);
+	async store(body: Omit<UserSchema, "id">): Promise<UserSchema> {
 		const [result] = await this.db
 			.insert(userEntity)
 			.values({
 				...body,
-				code,
-				slug,
 				intentos_session: 0,
 				enabled_notifications_webpush: true,
 			})
@@ -58,7 +48,7 @@ export class UserRepository {
 		return result;
 	}
 
-	async update(id: number, body: UserUpdateDto) {
+	async update(id: number, body: Partial<UserSchema>) {
 		const result = await this.db
 			.update(userEntity)
 			.set(body)

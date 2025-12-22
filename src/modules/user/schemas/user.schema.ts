@@ -110,3 +110,8 @@ export type UserSelect = Pick<
 
 export type UserSchemaFromServer = UserSchema & {};
 export type UserAuth = UserSchemaFromServer;
+
+export type UserFindByEmailToLogin = Pick<
+	UserSchema,
+	"id" | "email" | "password"
+>;

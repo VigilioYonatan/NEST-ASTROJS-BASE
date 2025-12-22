@@ -1,5 +1,4 @@
 import { UserRepository } from "@modules/user/repositories/user.repository";
-import type { UserAuth } from "@modules/user/schemas/user.schema";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import type { Profile } from "passport-google-oauth20";
@@ -9,8 +8,8 @@ import { RegisterDto } from "../dtos/register.dto";
 export class AuthService {
 	constructor(private readonly userRepository: UserRepository) {}
 
-	async validateUser(email: string, pass: string): Promise<UserAuth | null> {
-		const user = await this.userRepository.findByEmail(email);
+	async validateUser(email: string, pass: string) {
+		const user = await this.userRepository.findByEmailToLogin(email);
 		if (user?.password) {
 			const isMatch = await bcrypt.compare(pass, user.password);
 			if (isMatch) {
@@ -22,14 +21,14 @@ export class AuthService {
 		return null;
 	}
 
-	async validateUserByEmail(email: string): Promise<UserAuth | null> {
-		const user = await this.userRepository.findByEmail(email);
+	async validateUserByEmail(email: string) {
+		const user = await this.userRepository.findByEmailToLogin(email);
 		return user ? { ...user, password: null } : null;
 	}
 
 	async register(registerDto: RegisterDto) {
 		// Check if user exists
-		const existingUser = await this.userRepository.findByEmail(
+		const existingUser = await this.userRepository.findByEmailToLogin(
 			registerDto.email,
 		);
 
@@ -46,6 +45,7 @@ export class AuthService {
 			role: "estudiante", // Default role
 			status: "activo",
 			photo: [],
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} as any);
 
 		return { ...newUser, password: null };
@@ -57,7 +57,7 @@ export class AuthService {
 		}
 
 		const email = profile.emails[0].value;
-		const user = await this.userRepository.findByEmail(email);
+		const user = await this.userRepository.findByEmailToLogin(email);
 
 		if (user) return { ...user, password: null };
 
@@ -74,15 +74,15 @@ export class AuthService {
 			status: "activo",
 			photo: profile.photos ? [{ file: profile.photos[0].value }] : [],
 			is_register_automatic: true,
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} as any);
 
 		return newUser;
 	}
 
 	async forgotPassword(email: string) {
-		const users = await this.userRepository.index();
-		const user = users.find((u) => u.email === email);
-		if (!user) {
+		const emailUser = await this.userRepository.findByEmailToLogin(email);
+		if (!emailUser) {
 			throw new BadRequestException("User not found");
 		}
 
@@ -93,9 +93,9 @@ export class AuthService {
 		return { message: "Recovery email sent", token }; // Return token for now for testing
 	}
 
-	async resetPassword(_token: string, newPassword: string) {
+	async resetPassword(_token: string, _newPassword: string) {
 		// TODO: Validate token
-		const hashedPassword = await bcrypt.hash(newPassword, 10);
+		// const hashedPassword = await bcrypt.hash(newPassword, 10);
 		// TODO: Update user password
 		return { message: "Password reset successfully" };
 	}
