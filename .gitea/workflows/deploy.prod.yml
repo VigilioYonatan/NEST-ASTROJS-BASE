@@ -1,0 +1,344 @@
+name: Deploy Production
+
+# 🏆 FLUJO STAFF/PRINCIPAL: SemVer + Migrations + Health Check + Rollback
+on:
+    push:
+        tags:
+            - "v*.*.*"
+    workflow_dispatch:
+        inputs:
+            confirm_deploy:
+                description: "Type 'DEPLOY' to confirm production deployment"
+                required: true
+                default: ""
+            reason:
+                description: "Reason for deployment"
+                required: true
+            skip_migrations:
+                description: "Skip database migrations"
+                required: false
+                default: "false"
+
+concurrency:
+    group: deploy-prod-${{ gitea.ref }}
+    cancel-in-progress: true
+
+env:
+    REGISTRY: gitea.tudominio.com
+    IMAGE_NAME: ${{ gitea.repository }}
+    APP_URL: https://miapp.com # ⚠️ CAMBIAR: Tu URL de producción
+
+jobs:
+    validate_input:
+        name: ✅ Validate
+        runs-on: ubuntu-latest
+        if: gitea.event_name == 'workflow_dispatch'
+        steps:
+            - name: Validate Confirmation
+              run: |
+                  if [ "${{ gitea.event.inputs.confirm_deploy }}" != "DEPLOY" ]; then
+                    echo "❌ Deployment not confirmed correctly. Type 'DEPLOY'."
+                    exit 1
+                  fi
+                  echo "✅ Deployment confirmed"
+
+    test:
+        name: 🧪 Quality Gate
+        runs-on: ubuntu-latest
+        needs: [validate_input]
+        if: always() && (needs.validate_input.result == 'success' || needs.validate_input.result == 'skipped')
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: test
+                    POSTGRES_PASSWORD: test
+                    POSTGRES_DB: test_db
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+            redis:
+                image: redis:7
+                ports:
+                    - 6379:6379
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Setup test environment
+              run: cp .env.example .env
+
+            - name: Lint Strict
+              run: pnpm run biome:check
+
+            - name: Unit Tests
+              run: pnpm test -- --run
+
+            - name: E2E Tests
+              run: pnpm run test:e2e -- --run
+              env:
+                  DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+                  REDIS_HOST: localhost
+                  REDIS_PORT: 6379
+
+    build_and_push:
+        name: 🐳 Build & Push Image
+        needs: test
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            previous_version: ${{ steps.previous.outputs.version }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Get previous version (for rollback)
+              id: previous
+              run: |
+                  # Obtener el tag anterior para rollback
+                  PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "none")
+                  if [[ "$PREV_TAG" == v* ]]; then
+                    PREV_VERSION=${PREV_TAG#v}
+                  else
+                    PREV_VERSION="none"
+                  fi
+                  echo "version=$PREV_VERSION" >> $GITEA_OUTPUT
+                  echo "📦 Previous version: $PREV_VERSION"
+
+            - name: Extract version
+              id: version
+              run: |
+                  if [[ "${{ gitea.ref }}" == refs/tags/v* ]]; then
+                    VERSION=${GITEA_REF#refs/tags/v}
+                  elif [[ -n "${{ gitea.event.inputs.version }}" ]]; then
+                    VERSION=${{ gitea.event.inputs.version }}
+                  else
+                    VERSION=$(git rev-parse --short HEAD)
+                  fi
+                  echo "version=$VERSION" >> $GITEA_OUTPUT
+                  echo "📦 Version: $VERSION"
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Gitea Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ secrets.REGISTRY_USERNAME }}
+                  password: ${{ secrets.REGISTRY_TOKEN }}
+
+            - name: Build and Push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  target: production
+                  push: true
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod-${{ gitea.sha }}
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production
+                  build-args: |
+                      VERSION=${{ steps.version.outputs.version }}
+
+    deploy:
+        name: 🚀 Deploy to Production
+        needs: build_and_push
+        runs-on: ubuntu-latest
+        outputs:
+            deploy_status: ${{ steps.deploy.outputs.status }}
+        steps:
+            - name: 🚀 Deploy to Server
+              id: deploy
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USER }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  port: ${{ secrets.SSH_PORT }}
+                  script: |
+                      set -e
+
+                      cd /home/dokploy/app/my-app-prod
+                      VERSION="${{ needs.build_and_push.outputs.version }}"
+                      SKIP_MIGRATIONS="${{ gitea.event.inputs.skip_migrations || 'false' }}"
+
+                      echo "🚀 Deploying version: $VERSION"
+
+                      # Login al registry
+                      echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+                      # Inyectar variables de entorno
+                      echo "${{ secrets.PROD_ENV_FILE }}" > .env
+
+                      # Especificar la versión a desplegar
+                      export IMAGE_TAG=$VERSION
+
+                      # Pull de la nueva imagen
+                      docker compose -f docker-compose.production.yml pull
+
+                      # ============================================
+                      # 🗄️ DATABASE MIGRATIONS (antes del deploy)
+                      # ============================================
+                      if [ "$SKIP_MIGRATIONS" != "true" ]; then
+                        echo "🗄️ Running database migrations..."
+                        docker compose -f docker-compose.production.yml run --rm app pnpm run db:migrate || {
+                          echo "❌ Migration failed!"
+                          exit 1
+                        }
+                        echo "✅ Migrations completed"
+                      else
+                        echo "⏭️ Skipping migrations"
+                      fi
+
+                      # ============================================
+                      # 🔄 DEPLOY (rolling update)
+                      # ============================================
+                      echo "🔄 Starting deployment..."
+                      docker compose -f docker-compose.production.yml up -d
+
+                      # ============================================
+                      # 🏥 HEALTH CHECK
+                      # ============================================
+                      echo "🏥 Running health check..."
+                      HEALTH_URL="http://localhost:3000/api/health"
+                      MAX_RETRIES=30
+                      RETRY_INTERVAL=2
+
+                      for i in $(seq 1 $MAX_RETRIES); do
+                        echo "  Attempt $i/$MAX_RETRIES..."
+                        if curl -sf "$HEALTH_URL" > /dev/null 2>&1; then
+                          echo "✅ Health check passed!"
+                          docker image prune -f
+                          echo "status=success" >> $GITEA_OUTPUT
+                          exit 0
+                        fi
+                        sleep $RETRY_INTERVAL
+                      done
+
+                      echo "❌ Health check failed after $MAX_RETRIES attempts"
+                      echo "status=failed" >> $GITEA_OUTPUT
+                      exit 1
+
+    # ============================================
+    # 🔙 ROLLBACK (si el deploy falla)
+    # ============================================
+    rollback:
+        name: 🔙 Rollback
+        needs: [build_and_push, deploy]
+        if: failure() && needs.build_and_push.outputs.previous_version != 'none'
+        runs-on: ubuntu-latest
+        steps:
+            - name: 🔙 Rollback to previous version
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.SERVER_IP }}
+                  username: ${{ secrets.SERVER_USER }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  port: ${{ secrets.SSH_PORT }}
+                  script: |
+                      set -e
+
+                      cd /home/dokploy/app/my-app-prod
+                      PREV_VERSION="${{ needs.build_and_push.outputs.previous_version }}"
+
+                      echo "🔙 Rolling back to version: $PREV_VERSION"
+
+                      # Login al registry
+                      echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+
+                      # Cambiar a versión anterior
+                      export IMAGE_TAG=$PREV_VERSION
+
+                      # Pull de la versión anterior
+                      docker compose -f docker-compose.production.yml pull
+                      docker compose -f docker-compose.production.yml up -d
+
+                      echo "✅ Rollback completed to version: $PREV_VERSION"
+
+    # ============================================
+    # 🧪 SMOKE TESTS (post-deploy)
+    # ============================================
+    smoke_tests:
+        name: 🧪 Smoke Tests
+        needs: [build_and_push, deploy]
+        if: success()
+        runs-on: ubuntu-latest
+        steps:
+            - name: 🧪 Run Smoke Tests
+              run: |
+                  APP_URL="${{ env.APP_URL }}"
+                  echo "🧪 Running smoke tests against $APP_URL"
+
+                  # Test 1: Health endpoint
+                  echo "Testing /api/health..."
+                  curl -sf "$APP_URL/api/health" || { echo "❌ Health check failed"; exit 1; }
+                  echo "✅ Health check passed"
+
+                  # Test 2: API disponible
+                  echo "Testing API availability..."
+                  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api")
+                  if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
+                    echo "✅ API is responding (HTTP $HTTP_CODE)"
+                  else
+                    echo "❌ API returned HTTP $HTTP_CODE"
+                    exit 1
+                  fi
+
+                  # Test 3: Frontend cargando
+                  echo "Testing frontend..."
+                  curl -sf "$APP_URL" | grep -q "<html" || { echo "❌ Frontend not loading"; exit 1; }
+                  echo "✅ Frontend is loading"
+
+                  echo ""
+                  echo "🎉 All smoke tests passed!"
+
+    notify:
+        name: 📢 Notify
+        needs: [build_and_push, deploy, smoke_tests, rollback]
+        if: always()
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Discord Notification
+              env:
+                  DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+                  DEPLOY_STATUS: ${{ needs.deploy.result }}
+                  SMOKE_STATUS: ${{ needs.smoke_tests.result }}
+                  ROLLBACK_STATUS: ${{ needs.rollback.result }}
+                  VERSION: ${{ needs.build_and_push.outputs.version }}
+                  PREV_VERSION: ${{ needs.build_and_push.outputs.previous_version }}
+              run: |
+                  if [ "$DEPLOY_STATUS" == "success" ] && [ "$SMOKE_STATUS" == "success" ]; then
+                    COLOR=3066993
+                    TITLE="🚀 PROD v$VERSION DEPLOY EXITOSO"
+                    DESC="**Version:** $VERSION\n**Smoke Tests:** ✅ Passed"
+                  elif [ "$ROLLBACK_STATUS" == "success" ]; then
+                    COLOR=16776960  # Yellow
+                    TITLE="🔙 ROLLBACK a v$PREV_VERSION"
+                    DESC="**Failed Version:** $VERSION\n**Rolled back to:** $PREV_VERSION"
+                  else
+                    COLOR=15158332
+                    TITLE="❌ PROD v$VERSION DEPLOY FALLIDO"
+                    DESC="**Version:** $VERSION\n**Deploy:** $DEPLOY_STATUS\n**Smoke Tests:** $SMOKE_STATUS"
+                  fi
+
+                  curl -H "Content-Type: application/json" \
+                  -d "{\"embeds\": [{\"title\": \"$TITLE\", \"description\": \"$DESC\", \"color\": $COLOR}]}" \
+                  $DISCORD_WEBHOOK

@@ -1,6 +1,11 @@
 name: Deploy Production
 
+# 🏆 FLUJO SENIOR: Se dispara con Git Tags (SemVer)
+# Uso: git tag v1.2.3 && git push origin v1.2.3
 on:
+    push:
+        tags:
+            - "v*.*.*" # Solo tags semánticos: v1.0.0, v1.2.3, etc.
     workflow_dispatch:
         inputs:
             confirm_deploy:
@@ -10,14 +15,23 @@ on:
             reason:
                 description: "Reason for deployment (Release notes/Ticket ID)"
                 required: true
+            version:
+                description: "Version to deploy (e.g., 1.2.3) - leave empty to use latest"
+                required: false
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
+env:
+    REGISTRY: gitea.tudominio.com # ⚠️ CAMBIAR: Tu dominio de Gitea
+    IMAGE_NAME: ${{ github.repository }}
+
 jobs:
     validate_input:
         runs-on: ubuntu-latest
+        # Solo validar si es workflow_dispatch (manual)
+        if: github.event_name == 'workflow_dispatch'
         steps:
             - name: Validate Confirmation
               run: |
@@ -27,10 +41,30 @@ jobs:
                   fi
                   echo "✅ Deployment confirmed for reason: ${{ github.event.inputs.reason }}"
 
-    test_and_build:
+    test:
         name: 🧪 Quality Gate
-        needs: validate_input
         runs-on: ubuntu-latest
+        # Si es dispatch, esperar validación. Si es tag push, correr directo.
+        needs: [validate_input]
+        if: always() && (needs.validate_input.result == 'success' || needs.validate_input.result == 'skipped')
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: test
+                    POSTGRES_PASSWORD: test
+                    POSTGRES_DB: test_db
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+            redis:
+                image: redis:7
+                ports:
+                    - 6379:6379
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
@@ -44,44 +78,151 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
+            - name: Setup test environment
+              run: cp .env.example .env
+
             - name: Lint Strict
               run: pnpm run biome:check
 
             - name: Unit Tests
               run: pnpm test -- --run
 
-            # - name: E2E Tests
-            #   run: pnpm test:e2e
+            - name: E2E Tests
+              run: pnpm run test:e2e -- --run
+              env:
+                  DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+                  REDIS_HOST: localhost
+                  REDIS_PORT: 6379
 
-            - name: Build Application
-              run: pnpm run build:serve
+    build_and_push:
+        name: 🐳 Build & Push Image
+        needs: test
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            image_tag: ${{ steps.meta.outputs.tags }}
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Extract version
+              id: version
+              run: |
+                  if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+                    # Si es un tag, extraer versión (v1.2.3 -> 1.2.3)
+                    VERSION=${GITHUB_REF#refs/tags/v}
+                  elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+                    # Si es manual y se especificó versión
+                    VERSION=${{ github.event.inputs.version }}
+                  else
+                    # Fallback: usar SHA corto
+                    VERSION=$(git rev-parse --short HEAD)
+                  fi
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "📦 Version: $VERSION"
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Gitea Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ secrets.GITEA_USERNAME }}
+                  password: ${{ secrets.GITEA_TOKEN }}
+
+            - name: Extract metadata for Docker
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  tags: |
+                      # Versión semántica (1.2.3)
+                      type=raw,value=${{ steps.version.outputs.version }}
+                      # SHA para trazabilidad (prod-abc123f)
+                      type=sha,prefix=prod-
+                      # Tag "production" siempre apunta al último
+                      type=raw,value=production
+
+            - name: Build and Push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  target: production
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  build-args: |
+                      VERSION=${{ steps.version.outputs.version }}
+                      BUILD_DATE=${{ github.event.head_commit.timestamp }}
+                      VCS_REF=${{ github.sha }}
 
     deploy:
         name: 🚀 Deploy to Production
-        needs: test_and_build
+        needs: build_and_push
         runs-on: ubuntu-latest
         environment: production
         steps:
-            - name: 🚀 Inject Secrets & Deploy
+            - name: 🚀 Deploy to Server
               uses: appleboy/ssh-action@master
+              env:
+                  VERSION: ${{ needs.build_and_push.outputs.version }}
               with:
                   host: ${{ secrets.SERVER_IP }}
                   username: ${{ secrets.SERVER_USER }}
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  port: ${{ secrets.SSH_PORT }} # Optional, defaults to 22
+                  port: ${{ secrets.SSH_PORT }}
+                  envs: VERSION
                   script: |
                       # ⚠️ VERIFICA QUE ESTA RUTA SEA CORRECTA EN TU SERVIDOR
                       cd /home/dokploy/app/my-app-prod
 
-                      # Inyectar variables desde GitHub Secrets
+                      # Login al registry de Gitea
+                      echo "${{ secrets.GITEA_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ secrets.GITEA_USERNAME }} --password-stdin
+
+                      # Inyectar variables de entorno
                       echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
-                      # Desplegar
-                      docker compose up -d --build
+                      # Especificar la versión a desplegar
+                      export IMAGE_TAG=$VERSION
+
+                      # Pull de la nueva imagen y deploy
+                      docker compose -f docker-compose.production.yml pull
+                      docker compose -f docker-compose.production.yml up -d
+
+                      # Limpiar imágenes viejas (mantener últimas 5)
+                      docker image prune -f
+
+                      echo "✅ Deployed version: $VERSION"
+
+    create_release:
+        name: 📝 Create GitHub Release
+        needs: [build_and_push, deploy]
+        if: startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v1
+              with:
+                  generate_release_notes: true
+                  body: |
+                      ## 🚀 Release ${{ needs.build_and_push.outputs.version }}
+
+                      **Docker Image:** `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build_and_push.outputs.version }}`
+
+                      ### Rollback Command
+                      ```bash
+                      export IMAGE_TAG=${{ needs.build_and_push.outputs.version }}
+                      docker compose -f docker-compose.production.yml pull
+                      docker compose -f docker-compose.production.yml up -d
+                      ```
 
     notify:
         name: 📢 Notify Discord
-        needs: [deploy]
+        needs: [build_and_push, deploy]
         if: always()
         runs-on: ubuntu-latest
         steps:
@@ -90,16 +231,17 @@ jobs:
               env:
                   DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
                   STATUS: ${{ needs.deploy.result }}
-                  REASON: ${{ github.event.inputs.reason }}
+                  VERSION: ${{ needs.build_and_push.outputs.version }}
+                  REASON: ${{ github.event.inputs.reason || 'Tag release' }}
               run: |
                   if [ "$STATUS" == "success" ]; then
                     COLOR=3066993 # Green
-                    TITLE="🚀 PROD DEPLOY EXITOSO"
+                    TITLE="🚀 PROD v$VERSION DEPLOY EXITOSO"
                   else
                     COLOR=15158332 # Red
-                    TITLE="❌ PROD DEPLOY FALLIDO"
+                    TITLE="❌ PROD v$VERSION DEPLOY FALLIDO"
                   fi
 
                   curl -H "Content-Type: application/json" \
-                  -d "{\"embeds\": [{\"title\": \"$TITLE\", \"description\": \"**Reason:** $REASON\n**Commit:** $(git log -1 --pretty=%B)\", \"color\": $COLOR}]}" \
+                  -d "{\"embeds\": [{\"title\": \"$TITLE\", \"description\": \"**Version:** $VERSION\n**Reason:** $REASON\n**Commit:** $(git log -1 --pretty=%B)\", \"color\": $COLOR}]}" \
                   $DISCORD_WEBHOOK

@@ -1,0 +1,54 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+    # 📦 NPM Dependencies
+    - package-ecosystem: "npm"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+          time: "09:00"
+          timezone: "America/Lima"
+      open-pull-requests-limit: 10
+      commit-message:
+          prefix: "deps"
+          include: "scope"
+      labels:
+          - "dependencies"
+          - "npm"
+      reviewers:
+          - "VigilioYonatan" # ⚠️ CAMBIAR: Tu usuario de GitHub
+      groups:
+          # Agrupar updates menores/patch para reducir PRs
+          minor-and-patch:
+              patterns:
+                  - "*"
+              update-types:
+                  - "minor"
+                  - "patch"
+
+    # 🐳 Docker Dependencies
+    - package-ecosystem: "docker"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+      commit-message:
+          prefix: "docker"
+      labels:
+          - "dependencies"
+          - "docker"
+
+    # 🔧 GitHub Actions
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+          day: "monday"
+      commit-message:
+          prefix: "ci"
+      labels:
+          - "dependencies"
+          - "github-actions"

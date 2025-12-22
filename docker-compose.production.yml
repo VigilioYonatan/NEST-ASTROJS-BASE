@@ -5,14 +5,17 @@ include:
 
 services:
     app:
+        # ⚠️ CAMBIAR: Usa tu dominio de Gitea y nombre del repositorio
+        image: gitea.tudominio.com/usuario/NEST-ASTROJS-BASE:${IMAGE_TAG:-production}
         extends:
             file: .docker/docker-compose-base.yml
             service: app
         restart: always
-        build:
-            context: .
-            dockerfile: Dockerfile
-            target: production
+        # NOTA: Ya no construimos aquí, solo hacemos pull de la imagen pre-construida
+        # build:
+        #     context: .
+        #     dockerfile: Dockerfile
+        #     target: production
 
 networks:
     dokploy-network:
